@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart Irrigation Control</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #333;
+      margin: 0;
+      padding: 0px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+    }
+    .card {
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-bottom: 10px;
+    }
+    .sensor {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 18px;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .sensor:last-child {
+      border-bottom: none;
+    }
+    .sensor .label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 60%;
+    }
+    .sensor .value {
+      width: 40%;
+      text-align: right;
+      font-weight: bold;
+    }
+    .section-title {
+      margin-bottom: 10px;
+      color: #555;
+      font-weight: bold;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #pumpOn {
+      background-color: #27ae60;
+      color: white;
+    }
+    #pumpOff {
+      background-color: #c0392b;
+      color: white;
+    }
+    .mode-label {
+      margin-right: 15px;
+      font-size: 16px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .mode-label input[type="radio"] {
+      display: none;
+    }
+    .mode-label span {
+      padding: 4px 10px;
+      border-radius: 6px;
+      background-color: #eee;
+      transition: 0.2s;
+    }
+    .mode-label input[type="radio"]:checked + span {
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+    }
+    .status {
+      font-weight: bold;
+    }
+    .icon {
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Smart Irrigation System</h1>
+
+    <!-- Sensor Readings -->
+    <div class="card">
+      <div class="section-title">Sensor Readings:</div>
+      <div class="sensor">
+        <div class="label"><span class="icon">🌡️</span>Temperature</div>
+        <div class="value"><span id="temperature">--</span> °C</div>
+      </div>
+      <div class="sensor">
+        <div class="label"><span class="icon">💧</span>Humidity</div>
+        <div class="value"><span id="humidity">--</span> %</div>
+      </div>
+      <div class="sensor">
+        <div class="label"><span class="icon">🌱</span>Soil Moisture</div>
+        <div class="value"><span id="soilMoisture">--</span> %</div>
+      </div>
+    </div>
+
+    <!-- Mode Selection -->
+    <div class="card">
+      <div class="section-title">Mode Selection:</div>
+      <label class="mode-label">
+        <input type="radio" name="mode" value="0" checked />
+        <span>Automatic</span>
+      </label>
+      <label class="mode-label">
+        <input type="radio" name="mode" value="1" />
+        <span>Manual</span>
+      </label>
+    </div>
+
+    <!-- Manual Control -->
+    <div class="card" id="manualControl" style="display: none;">
+      <div class="section-title">Manual Pump Control:</div>
+      <button id="pumpOn">Turn On</button>
+      <button id="pumpOff">Turn Off</button>
+    </div>
+
+    <!-- Pump Status -->
+    <div class="card" id="pumpStatusCard">
+      <div class="section-title">Pump Status:</div>
+      <div class="sensor">
+        <div class="label">Current Pump State:</div>
+        <div class="value" id="pumpStatus">--</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdwwY1Hz4LdPWRCuQ6VYiwTjHyEszOBVU",
+      authDomain: "smartirrigationsystem-6c280.firebaseapp.com",
+      databaseURL: "https://smartirrigationsystem-6c280-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "smartirrigationsystem-6c280",
+      storageBucket: "smartirrigationsystem-6c280.firebasestorage.app",
+      messagingSenderId: "504376171677",
+      appId: "1:504376171677:web:d9c22edece325eee9d4874"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const tempRef = ref(db, "/sensor/temperature");
+    const humidityRef = ref(db, "/sensor/humidity");
+    const soilMoistureRef = ref(db, "/sensor/SoilMoisture");
+    const modeRef = ref(db, "/control/mode");
+    const pumpRef = ref(db, "/control/pumpState");
+
+    // Update values
+    onValue(tempRef, (snapshot) => {
+      document.getElementById("temperature").innerText = snapshot.val();
+    });
+
+    onValue(humidityRef, (snapshot) => {
+      document.getElementById("humidity").innerText = snapshot.val();
+    });
+
+    onValue(soilMoistureRef, (snapshot) => {
+      document.getElementById("soilMoisture").innerText = snapshot.val();
+    });
+
+    // Display pump status
+    function showPumpStatus(state) {
+      if (state === 1) {
+        document.getElementById("pumpStatus").innerText = "ON";
+      } else if (state === 0) {
+        document.getElementById("pumpStatus").innerText = "OFF";
+      } else {
+        document.getElementById("pumpStatus").innerText = "OFF";
+      }
+    }
+
+    onValue(pumpRef, (snapshot) => {
+      const state = snapshot.val();
+      showPumpStatus(state);
+    });
+
+    // Manual control buttons
+    document.getElementById("pumpOn").addEventListener("click", () => {
+      set(pumpRef, 1);
+      showPumpStatus(1);
+    });
+
+    document.getElementById("pumpOff").addEventListener("click", () => {
+      set(pumpRef, 0);
+      showPumpStatus(0);
+    });
+
+    // Show/hide manual control based on mode
+    onValue(modeRef, (snapshot) => {
+      const mode = snapshot.val();
+      const radios = document.querySelectorAll('input[name="mode"]');
+      radios.forEach((r) => (r.checked = Number(r.value) === mode));
+      document.getElementById("manualControl").style.display = mode === 1 ? "block" : "none";
+    });
+
+    // Change mode
+    document.querySelectorAll('input[name="mode"]').forEach((radio) => {
+      radio.addEventListener("change", (event) => {
+        const modeValue = Number(event.target.value);
+        set(modeRef, modeValue);
+        document.getElementById("manualControl").style.display = modeValue === 1 ? "block" : "none";
+      });
+    });
+  </script>
+</body>
+</html>
